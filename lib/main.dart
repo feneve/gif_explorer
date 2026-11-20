@@ -1,6 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_modular/flutter_modular.dart';
+import 'package:gif_explorer/app/app_module.dart';
 import 'package:gif_explorer/app/app_widget.dart';
+import 'package:gif_explorer/app/core/themes/theme_controller.dart';
 
 void main() {
-  runApp(AppWidget());
+  runApp(
+    ModularApp(
+      module: appModule, 
+      provide: (s) =>s.addListenable<ThemeController>(
+        ThemeController.new,
+        (controller) => controller,
+        (controller) => controller.dispose() 
+        ),
+      child:  const AppWidget())
+  );
 }
