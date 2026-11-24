@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:gif_explorer/app/core/constantes/api_config.dart';
-import 'package:gif_explorer/app/modular/explorer/data/datasource/explorer_remote_data_source.dart';
-import 'package:gif_explorer/app/modular/explorer/data/repository/explorer_repository.dart';
-import 'package:gif_explorer/app/modular/explorer/domain/repository/explorer_repository.dart';
-import 'package:gif_explorer/app/modular/explorer/domain/usecase/get_trending_gifs.dart';
+import 'package:gif_explorer/app/modules/explorer/data/datasource/explorer_remote_data_source.dart';
+import 'package:gif_explorer/app/modules/explorer/data/repository/explorer_repository.dart';
+import 'package:gif_explorer/app/modules/explorer/domain/repository/explorer_repository.dart';
+import 'package:gif_explorer/app/modules/explorer/domain/usecase/get_trending_gifs.dart';
 
 void registerExplorerBindings(ModularContext c){
 

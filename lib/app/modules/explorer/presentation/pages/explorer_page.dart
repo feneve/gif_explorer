@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:gif_explorer/app/core/themes/app_colors.dart';
 import 'package:gif_explorer/app/core/themes/theme_controller.dart';
-import 'package:gif_explorer/app/modular/explorer/presentation/controller/explorer_controller.dart';
-import 'package:gif_explorer/app/modular/explorer/presentation/widget/trending_content_widget.dart';
-
+import 'package:gif_explorer/app/modules/explorer/presentation/controller/explorer_controller.dart';
+import 'package:gif_explorer/app/modules/explorer/presentation/widget/trending_content_widget.dart';
 
 class ExplorerPage extends StatefulWidget {
   const ExplorerPage({super.key});
@@ -15,7 +14,7 @@ class ExplorerPage extends StatefulWidget {
 
 class _ExplorerPageState extends State<ExplorerPage> {
   bool _requestedTrending = false;
-
+  //so aconte no primeiro build das arvores de widget
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -23,10 +22,7 @@ class _ExplorerPageState extends State<ExplorerPage> {
     if (_requestedTrending) return;
 
     _requestedTrending = true;
-    context.read<ExplorerController>().loadTrendingGifs(
-          limit: 20,
-          offset: 0,
-        );
+    context.read<ExplorerController>().loadTrendingGifs(limit: 4, offset: 0);
   }
 
   @override
@@ -39,6 +35,39 @@ class _ExplorerPageState extends State<ExplorerPage> {
 
     return Scaffold(
       backgroundColor: colors.background,
+      appBar: AppBar(
+        backgroundColor: colors.surface,
+        foregroundColor: colors.text,
+        title: RichText(
+          text: TextSpan(
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: colors.text,
+            ),
+            children: [
+              TextSpan(
+                text: 'GIF ',
+                style: TextStyle(color: colors.primary),
+              ),
+              const TextSpan(text: 'Explorer'),
+            ],
+          ),
+        ),
+        actions: [
+          IconButton(
+            tooltip: isDark
+                ? 'Mudar para tema claro'
+                : 'Mudar para tema escuro',
+            onPressed: themeController.toggleTheme,
+            icon: Icon(
+              isDark ? Icons.light_mode : Icons.dark_mode,
+              color: colors.text,
+            ),
+          ),
+        ],
+      ),
+
       body: SafeArea(
         bottom: false,
         child: CustomScrollView(
@@ -58,22 +87,12 @@ class _ExplorerPageState extends State<ExplorerPage> {
                           ),
                           children: [
                             TextSpan(
-                              text: 'GIF ',
+                              text: 'GIF  ',
                               style: TextStyle(color: colors.primary),
                             ),
                             const TextSpan(text: 'Explorer'),
                           ],
                         ),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: isDark
-                          ? 'Mudar para tema claro'
-                          : 'Mudar para tema escuro',
-                      onPressed: themeController.toggleTheme,
-                      icon: Icon(
-                        isDark ? Icons.light_mode : Icons.dark_mode,
-                        color: colors.text,
                       ),
                     ),
                   ],
@@ -88,10 +107,7 @@ class _ExplorerPageState extends State<ExplorerPage> {
                   decoration: InputDecoration(
                     hintText: 'Search for GIFs...',
                     hintStyle: TextStyle(color: colors.textMuted),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: colors.textMuted,
-                    ),
+                    prefixIcon: Icon(Icons.search, color: colors.textMuted),
                     filled: true,
                     fillColor: colors.surfaceVariant,
                     contentPadding: const EdgeInsets.symmetric(vertical: 14),
@@ -117,19 +133,34 @@ class _ExplorerPageState extends State<ExplorerPage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
-                      'See all',
-                      style: TextStyle(color: colors.primary),
-                    ),
+                    Text('See all', style: TextStyle(color: colors.primary)),
                   ],
                 ),
               ),
             ),
             TrendingContentWidget(
               state: explorerState,
-              onRetry: () => explorerController.loadTrendingGifs(
-                limit: 20,
-                offset: 0,
+              onRetry: () =>
+                  explorerController.loadTrendingGifs(limit: 10, offset: 0),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                child: Center(
+                  child: explorerState.gifs.isEmpty || !explorerState.hasMore
+                      ? const SizedBox.shrink()
+                      : explorerState.isLoadingMore
+                      ? const CircularProgressIndicator()
+                      : ElevatedButton(
+                          onPressed: () {
+                            explorerController.loadMoreTrendingGifs();
+                          },
+                          child: const Text('Carregar mais'),
+                        ),
+                ),
               ),
             ),
             SliverToBoxAdapter(
@@ -146,10 +177,7 @@ class _ExplorerPageState extends State<ExplorerPage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
-                      'See all',
-                      style: TextStyle(color: colors.primary),
-                    ),
+                    Text('See all', style: TextStyle(color: colors.primary)),
                   ],
                 ),
               ),
@@ -233,10 +261,7 @@ class _ExplorerPageState extends State<ExplorerPage> {
 }
 
 class _CategoryPill extends StatelessWidget {
-  const _CategoryPill({
-    required this.label,
-    required this.colors,
-  });
+  const _CategoryPill({required this.label, required this.colors});
 
   final String label;
   final AppColors colors;
@@ -251,10 +276,7 @@ class _CategoryPill extends StatelessWidget {
         color: colors.surfaceVariant,
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Text(
-        label,
-        style: TextStyle(color: colors.text),
-      ),
+      child: Text(label, style: TextStyle(color: colors.text)),
     );
   }
 }

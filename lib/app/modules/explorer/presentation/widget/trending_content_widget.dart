@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gif_explorer/app/core/themes/app_colors.dart';
-import 'package:gif_explorer/app/modular/explorer/presentation/controller/states/explorer_state.dart';
-import 'package:gif_explorer/app/modular/explorer/presentation/widget/gif_grade_widget.dart';
+import 'package:gif_explorer/app/modules/explorer/presentation/controller/states/explorer_state.dart';
+import 'package:gif_explorer/app/modules/explorer/presentation/widget/gif_grade_widget.dart';
 
 
 class TrendingContentWidget extends StatelessWidget {

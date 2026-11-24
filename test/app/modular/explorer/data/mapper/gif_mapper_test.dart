@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gif_explorer/app/modular/explorer/data/mapper/gif_mapper.dart';
+import 'package:gif_explorer/app/modules/explorer/data/mapper/gif_mapper.dart';
 
 void main(){
 test('Validar a conversão do map pra Gif ',
