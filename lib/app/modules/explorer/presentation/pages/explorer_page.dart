@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:gif_explorer/app/core/themes/app_colors.dart';
@@ -13,8 +15,16 @@ class ExplorerPage extends StatefulWidget {
 }
 
 class _ExplorerPageState extends State<ExplorerPage> {
+  final ScrollController _scrollController = ScrollController();
+
   bool _requestedTrending = false;
-  //so aconte no primeiro build das arvores de widget
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -22,7 +32,45 @@ class _ExplorerPageState extends State<ExplorerPage> {
     if (_requestedTrending) return;
 
     _requestedTrending = true;
-    context.read<ExplorerController>().loadTrendingGifs(limit: 4, offset: 0);
+
+    unawaited(
+      context.read<ExplorerController>().loadTrendingGifs(
+            limit: 4,
+            offset: 0,
+          ),
+    );
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+
+    final position = _scrollController.position;
+
+    // Começa a buscar a próxima página quando faltam 400 pixels
+    // de conteúdo para chegar ao fim.
+    if (position.extentAfter > 400) return;
+
+    final explorerController = context.read<ExplorerController>();
+    final state = explorerController.state;
+
+    // Evita chamadas duplicadas ou buscas quando não há mais resultados.
+    if (state.isLoadingMore ||
+        !state.hasMore ||
+        state.gifs.isEmpty ||
+        state.loadMoreError != null) {
+      return;
+    }
+
+    unawaited(explorerController.loadMoreTrendingGifs());
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+
+    super.dispose();
   }
 
   @override
@@ -67,47 +115,23 @@ class _ExplorerPageState extends State<ExplorerPage> {
           ),
         ],
       ),
-
       body: SafeArea(
         bottom: false,
         child: CustomScrollView(
+          controller: _scrollController,
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: RichText(
-                        text: TextSpan(
-                          style: TextStyle(
-                            fontSize: 27,
-                            fontWeight: FontWeight.bold,
-                            color: colors.text,
-                          ),
-                          children: [
-                            TextSpan(
-                              text: 'GIF  ',
-                              style: TextStyle(color: colors.primary),
-                            ),
-                            const TextSpan(text: 'Explorer'),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: TextField(
                   readOnly: true,
                   decoration: InputDecoration(
                     hintText: 'Search for GIFs...',
                     hintStyle: TextStyle(color: colors.textMuted),
-                    prefixIcon: Icon(Icons.search, color: colors.textMuted),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: colors.textMuted,
+                    ),
                     filled: true,
                     fillColor: colors.surfaceVariant,
                     contentPadding: const EdgeInsets.symmetric(vertical: 14),
@@ -119,50 +143,8 @@ class _ExplorerPageState extends State<ExplorerPage> {
                 ),
               ),
             ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Trending',
-                      style: TextStyle(
-                        color: colors.text,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text('See all', style: TextStyle(color: colors.primary)),
-                  ],
-                ),
-              ),
-            ),
-            TrendingContentWidget(
-              state: explorerState,
-              onRetry: () =>
-                  explorerController.loadTrendingGifs(limit: 10, offset: 0),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                child: Center(
-                  child: explorerState.gifs.isEmpty || !explorerState.hasMore
-                      ? const SizedBox.shrink()
-                      : explorerState.isLoadingMore
-                      ? const CircularProgressIndicator()
-                      : ElevatedButton(
-                          onPressed: () {
-                            explorerController.loadMoreTrendingGifs();
-                          },
-                          child: const Text('Carregar mais'),
-                        ),
-                ),
-              ),
-            ),
+
+            // Categorias ficam acima do feed de GIFs.
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
@@ -177,7 +159,10 @@ class _ExplorerPageState extends State<ExplorerPage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text('See all', style: TextStyle(color: colors.primary)),
+                    Text(
+                      'See all',
+                      style: TextStyle(color: colors.primary),
+                    ),
                   ],
                 ),
               ),
@@ -197,6 +182,7 @@ class _ExplorerPageState extends State<ExplorerPage> {
                 ),
               ),
             ),
+
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
@@ -212,16 +198,30 @@ class _ExplorerPageState extends State<ExplorerPage> {
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                 child: Text(
                   'Mais descobertas em breve',
                   style: TextStyle(color: colors.textMuted),
                 ),
               ),
             ),
+
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                child: Text(
+                  'Trending',
+                  style: TextStyle(
+                    color: colors.text,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                 child: Center(
                   child: Text(
                     'Powered by GIPHY',
@@ -229,6 +229,58 @@ class _ExplorerPageState extends State<ExplorerPage> {
                   ),
                 ),
               ),
+            ),
+
+            TrendingContentWidget(
+              state: explorerState,
+              onRetry: () {
+                unawaited(
+                  explorerController.loadTrendingGifs(
+                    limit: 4,
+                    offset: 0,
+                  ),
+                );
+              },
+            ),
+
+            // O indicador ou erro aparece depois dos GIFs.
+            if (explorerState.isLoadingMore)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+              ),
+
+            if (explorerState.loadMoreError != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      Text(
+                        explorerState.loadMoreError!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: colors.textMuted),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () {
+                          unawaited(
+                            explorerController.loadMoreTrendingGifs(),
+                          );
+                        },
+                        child: const Text('Tentar novamente'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 24),
             ),
           ],
         ),
@@ -261,7 +313,10 @@ class _ExplorerPageState extends State<ExplorerPage> {
 }
 
 class _CategoryPill extends StatelessWidget {
-  const _CategoryPill({required this.label, required this.colors});
+  const _CategoryPill({
+    required this.label,
+    required this.colors,
+  });
 
   final String label;
   final AppColors colors;
@@ -276,7 +331,10 @@ class _CategoryPill extends StatelessWidget {
         color: colors.surfaceVariant,
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Text(label, style: TextStyle(color: colors.text)),
+      child: Text(
+        label,
+        style: TextStyle(color: colors.text),
+      ),
     );
   }
 }
