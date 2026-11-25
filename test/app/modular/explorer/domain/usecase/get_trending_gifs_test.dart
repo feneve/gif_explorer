@@ -62,4 +62,10 @@ class FakeExplorerRepository implements IExplorerRepository {
     receivedOffset = offset;
     return result;
   }
+
+  @override
+  Future<Either<IFailure, List<Gif>>> searchGifs({required int limit, required int offset, required String query}) {
+    // TODO: implement searchGifs
+    throw UnimplementedError();
+  }
 }

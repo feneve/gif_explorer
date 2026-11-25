@@ -46,14 +46,13 @@ class _ExplorerPageState extends State<ExplorerPage> {
 
     final position = _scrollController.position;
 
-    // Começa a buscar a próxima página quando faltam 400 pixels
-    // de conteúdo para chegar ao fim.
+    // Começa a buscar antes de chegar exatamente ao fim.
     if (position.extentAfter > 400) return;
 
     final explorerController = context.read<ExplorerController>();
     final state = explorerController.state;
 
-    // Evita chamadas duplicadas ou buscas quando não há mais resultados.
+    // Evita chamadas duplicadas e requisições quando não há mais resultados.
     if (state.isLoadingMore ||
         !state.hasMore ||
         state.gifs.isEmpty ||
@@ -62,6 +61,48 @@ class _ExplorerPageState extends State<ExplorerPage> {
     }
 
     unawaited(explorerController.loadMoreTrendingGifs());
+  }
+
+  void _searchCategory(String query) {
+    unawaited(
+      context.read<ExplorerController>().searchGifs(
+            limit: 4,
+            offset: 0,
+            query: query,
+          ),
+    );
+  }
+
+  void _showTrending() {
+    unawaited(
+      context.read<ExplorerController>().loadTrendingGifs(
+            limit: 4,
+            offset: 0,
+          ),
+    );
+  }
+
+  void _retryCurrentFeed() {
+    final controller = context.read<ExplorerController>();
+    final query = controller.state.searchQuery;
+
+    if (query == null) {
+      unawaited(
+        controller.loadTrendingGifs(
+          limit: 4,
+          offset: 0,
+        ),
+      );
+      return;
+    }
+
+    unawaited(
+      controller.searchGifs(
+        limit: 4,
+        offset: 0,
+        query: query,
+      ),
+    );
   }
 
   @override
@@ -80,6 +121,10 @@ class _ExplorerPageState extends State<ExplorerPage> {
     final explorerState = explorerController.state;
     final colors = Theme.of(context).extension<AppColors>()!;
     final isDark = themeController.state.themeMode == ThemeMode.dark;
+
+    final feedTitle = explorerState.searchQuery == null
+        ? 'Trending'
+        : 'Resultados para "${explorerState.searchQuery}"';
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -104,9 +149,8 @@ class _ExplorerPageState extends State<ExplorerPage> {
         ),
         actions: [
           IconButton(
-            tooltip: isDark
-                ? 'Mudar para tema claro'
-                : 'Mudar para tema escuro',
+            tooltip:
+                isDark ? 'Mudar para tema claro' : 'Mudar para tema escuro',
             onPressed: themeController.toggleTheme,
             icon: Icon(
               isDark ? Icons.light_mode : Icons.dark_mode,
@@ -124,7 +168,16 @@ class _ExplorerPageState extends State<ExplorerPage> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                 child: TextField(
-                  readOnly: true,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (query) {
+                    unawaited(
+                      explorerController.searchGifs(
+                        limit: 4,
+                        offset: 0,
+                        query: query,
+                      ),
+                    );
+                  },
                   decoration: InputDecoration(
                     hintText: 'Search for GIFs...',
                     hintStyle: TextStyle(color: colors.textMuted),
@@ -132,9 +185,11 @@ class _ExplorerPageState extends State<ExplorerPage> {
                       Icons.search,
                       color: colors.textMuted,
                     ),
+                    errorText: explorerState.searchInputError,
                     filled: true,
                     fillColor: colors.surfaceVariant,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                    contentPadding:
+                        const EdgeInsets.symmetric(vertical: 14),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(28),
                       borderSide: BorderSide.none,
@@ -144,7 +199,7 @@ class _ExplorerPageState extends State<ExplorerPage> {
               ),
             ),
 
-            // Categorias ficam acima do feed de GIFs.
+            // Categorias acima do feed.
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
@@ -174,10 +229,26 @@ class _ExplorerPageState extends State<ExplorerPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   scrollDirection: Axis.horizontal,
                   children: [
-                    _CategoryPill(label: '🔥 Trending', colors: colors),
-                    _CategoryPill(label: '😀 Funny', colors: colors),
-                    _CategoryPill(label: '❤️ Love', colors: colors),
-                    _CategoryPill(label: '🎮 Gaming', colors: colors),
+                    _CategoryPill(
+                      label: '🔥 Trending',
+                      colors: colors,
+                      onTap: _showTrending,
+                    ),
+                    _CategoryPill(
+                      label: '😀 Funny',
+                      colors: colors,
+                      onTap: () => _searchCategory('funny'),
+                    ),
+                    _CategoryPill(
+                      label: '❤️ Love',
+                      colors: colors,
+                      onTap: () => _searchCategory('love'),
+                    ),
+                    _CategoryPill(
+                      label: '🎮 Gaming',
+                      colors: colors,
+                      onTap: () => _searchCategory('gaming'),
+                    ),
                   ],
                 ),
               ),
@@ -210,7 +281,7 @@ class _ExplorerPageState extends State<ExplorerPage> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
                 child: Text(
-                  'Trending',
+                  feedTitle,
                   style: TextStyle(
                     color: colors.text,
                     fontSize: 20,
@@ -233,17 +304,9 @@ class _ExplorerPageState extends State<ExplorerPage> {
 
             TrendingContentWidget(
               state: explorerState,
-              onRetry: () {
-                unawaited(
-                  explorerController.loadTrendingGifs(
-                    limit: 4,
-                    offset: 0,
-                  ),
-                );
-              },
+              onRetry: _retryCurrentFeed,
             ),
 
-            // O indicador ou erro aparece depois dos GIFs.
             if (explorerState.isLoadingMore)
               const SliverToBoxAdapter(
                 child: Padding(
@@ -316,24 +379,33 @@ class _CategoryPill extends StatelessWidget {
   const _CategoryPill({
     required this.label,
     required this.colors,
+    required this.onTap,
   });
 
   final String label;
   final AppColors colors;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(right: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: Material(
         color: colors.surfaceVariant,
         borderRadius: BorderRadius.circular(18),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(color: colors.text),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Center(
+              child: Text(
+                label,
+                style: TextStyle(color: colors.text),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

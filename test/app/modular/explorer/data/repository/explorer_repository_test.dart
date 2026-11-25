@@ -46,6 +46,12 @@ class FakeExplorerRemoteDataSource implements IExplorerRemoteDataSource {
 
     return response;
   }
+
+  @override
+  Future<Map<String, dynamic>> searchGifs({required int limit, required int offset, required String query}) {
+    // TODO: implement searchGifs
+    throw UnimplementedError();
+  }
 }
 
 void main() {

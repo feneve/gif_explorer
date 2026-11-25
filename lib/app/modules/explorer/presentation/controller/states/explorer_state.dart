@@ -10,6 +10,8 @@ class ExplorerState extends ReactiveState {
   final bool isLoadingMore;
   final bool hasMore;
   final String? loadMoreError;
+  final String? searchQuery;
+  final String? searchInputError;
 
   const ExplorerState({
     this.gifs = const [],
@@ -18,6 +20,8 @@ class ExplorerState extends ReactiveState {
     this.isLoadingMore = false,
     this.hasMore = false,
     this.loadMoreError,
+    this.searchQuery,
+    this.searchInputError,
   });
 
   ExplorerState copyWith({
@@ -29,6 +33,10 @@ class ExplorerState extends ReactiveState {
     String? loadMoreError,
     bool clearErrorMensagem = false,
     bool clearLoadMoreError = false,
+    String? searchQuey,
+    String? searchInputError,
+    bool clearSearchQuery = false,
+    bool clearSearchInputError = false,
   }) {
     return ExplorerState(
       stateEnum: stateEnum ?? this.stateEnum,
@@ -41,6 +49,11 @@ class ExplorerState extends ReactiveState {
       loadMoreError: clearLoadMoreError
           ? null
           : loadMoreError ?? this.loadMoreError,
+     searchQuery:
+          clearSearchQuery ? null : searchQuery ?? searchQuery,
+      searchInputError: clearSearchInputError
+          ? null
+          : searchInputError ?? this.searchInputError,
     );
   }
 }

@@ -30,15 +30,17 @@ class ExplorerRepository implements IExplorerRepository {
         );
       }
 
-      final gifs = data.map<Gif>((item) {
-        if (item is! Map<String, dynamic>) {
-          throw const FormatException(
-            'Um item da lista de GIFs tem um formato inválido.',
-          );
-        }
+      final gifs = data
+          .map<Gif>((item) {
+            if (item is! Map<String, dynamic>) {
+              throw const FormatException(
+                'Um item da lista de GIFs tem um formato inválido.',
+              );
+            }
 
-        return GifMapper.fromMap(item);
-      }).toList(growable: false);
+            return GifMapper.fromMap(item);
+          })
+          .toList(growable: false);
 
       return Right<IFailure, List<Gif>>(gifs);
     } on FormatException {
@@ -48,5 +50,43 @@ class ExplorerRepository implements IExplorerRepository {
     } catch (_) {
       return Left<IFailure, List<Gif>>(UnexpectedFailure());
     }
+  }
+
+  @override
+  Future<Either<IFailure, List<Gif>>> searchGifs({
+    required int limit,
+    required int offset,
+    required String query,
+  }) async {
+    try {
+      final response = await explorerRemoteDataSource.searchGifs(
+        limit: limit,
+        offset: offset,
+        query: query,
+      );
+      final data = response['data'];
+      if (data is! List) {
+        throw const FormatException(
+          'A resposta da GIPHY não contém uma lista válida em "data"',
+        );
+      }
+      final gifs = data.map<Gif>((item) {
+        if (item is! Map<String, dynamic>) {
+          throw const FormatException(
+            'Um item da lista de GIFs tem um formato inválido.',
+          );
+        }
+
+        return GifMapper.fromMap(item);
+      }).toList(growable: false);
+       return Right<IFailure, List<Gif>>(gifs);
+    } on FormatException {
+      return Left<IFailure, List<Gif>>(InvalidResponseFailure());
+    } on DioException {
+      return Left<IFailure, List<Gif>>(NetworkFailure());
+    } catch (_) {
+      return Left<IFailure, List<Gif>>(UnexpectedFailure());
+    }
+    
   }
 }
